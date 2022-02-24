@@ -9,10 +9,10 @@ import * as CloudStorage from '../controller/cloud_storage.js';
 import * as EditProduct from '../controller/edit_product.js';
 let imageFile2Upload = null;
 
-export function addEventListeners(){
+export function addEventListeners() {
 
-    Elements.menuHome.addEventListener('click',async ()=>{
-        history.pushState(null,null,routePathnames.HOME);
+    Elements.menuHome.addEventListener('click', async () => {
+        history.pushState(null, null, routePathnames.HOME);
         const button = Elements.menuHome;
         const label = Util.disableButton(button);
         await home_page();
@@ -21,9 +21,9 @@ export function addEventListeners(){
 
     });
 
-    Elements.formAddProduct.imageButton.addEventListener('change', e=>{
+    Elements.formAddProduct.imageButton.addEventListener('change', e => {
         imageFile2Upload = e.target.files[0];
-        if(!imageFile2Upload){
+        if (!imageFile2Upload) {
             Elements.formAddProduct.imageTag.removeAttribute('src');
             return;
         }
@@ -32,17 +32,17 @@ export function addEventListeners(){
         reader.onload = () => Elements.formAddProduct.imageTag.src = reader.result; //Render
     });
 
-    Elements.formAddProduct.form.addEventListener('submit',addNewProduct);
+    Elements.formAddProduct.form.addEventListener('submit', addNewProduct);
 }
 
-export async function home_page(){
+export async function home_page() {
 
-    if(!currentUser){
-        Elements.root.innerHTML='<h1>Protected Page</h1>'
+    if (!currentUser) {
+        Elements.root.innerHTML = '<h1>Protected Page</h1>'
         return;
     }
 
-    let html= `
+    let html = `
         <div>
             <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modal-add-product">
                 +Add Product
@@ -51,10 +51,10 @@ export async function home_page(){
     `;
 
     let products;
-    try{
+    try {
         products = await CloudFunctions.getProductList();
-    }catch(e){
-        if(Constants.DEV) console.log(e);
+    } catch (e) {
+        if (Constants.DEV) console.log(e);
         Util.info('Cannot get product list', JSON.stringify(e));
         return;
     }
@@ -63,27 +63,27 @@ export async function home_page(){
         html += buildProductCard(p);
     });
 
-    Elements.root.innerHTML=html;
+    Elements.root.innerHTML = html;
 
-    const forms=document.getElementsByClassName('form-edit-delete-product');
-    for(let i=0;i< forms.length;i++)
+    const forms = document.getElementsByClassName('form-edit-delete-product');
+    for (let i = 0; i < forms.length; i++) 
     {
-        forms[i].addEventListener('submit',async e=> {
+        forms[i].addEventListener('submit', async e => {
             e.preventDefault();
             const buttons = e.target.getElementsByTagName('button');
             const submitter = e.target.submitter;
-            if(submitter=='EDIT'){
-                const label=Util.disableButton(buttons[0]);
+            if (submitter == 'EDIT') {
+                const label = Util.disableButton(buttons[0]);
                 await EditProduct.edit_product(e.target.docId.value);
                 //await Util.sleep(1000);
-                Util.enableButton(buttons[0],label);
-            }else if(submitter=='DELETE'){
+                Util.enableButton(buttons[0], label);
+            } else if (submitter == 'DELETE') {
                 const label = Util.disableButton(buttons[1]);
-                await EditProduct.delete_product(e.target.docId.value,e.target.imageName.value);
+                await EditProduct.delete_product(e.target.docId.value, e.target.imageName.value);
                 //await Util.sleep(1000);
-                Util.enableButton(buttons[1],label);
+                Util.enableButton(buttons[1], label);
             }
-            else{
+            else {
                 console.log('No suc submitter', submitter);
             }
             //const submitter=e.target.submitter;
@@ -93,36 +93,36 @@ export async function home_page(){
     }
 }
 
-async function addNewProduct(e){
+async function addNewProduct(e) {
     e.preventDefault();
     const name = e.target.name.value;
     const price = e.target.price.value;
     const summary = e.target.summary.value;
 
-    const product = new Product({name,price,summary});
+    const product = new Product({ name, price, summary });
 
     const button = e.target.getElementsByTagName('button')[0];
     const label = Util.disableButton(button);
 
-    try{
+    try {
         // upload the product image => imageName, imageURL
-        const {imageName, imageURL} = await CloudStorage.uploadImage(imageFile2Upload);
+        const { imageName, imageURL } = await CloudStorage.uploadImage(imageFile2Upload);
         product.imageName = imageName;
         product.imageURL = imageURL;
         const docId = await CloudFunctions.addProduct(product.toFirestore());
-        Util.info('Success!',`Added: ${product.name} ,docId=${docId}`, Elements.modalAddProduct);
+        Util.info('Success!', `Added: ${product.name} ,docId=${docId}`, Elements.modalAddProduct);
         e.target.reset();
         Elements.formAddProduct.imageTag.removeAttribute('src');
         await home_page();
-    } catch(e){
-        if(Constants.DEV) console.log(e);
-        Util.info('Add Product Failed',`${e.code}: ${e.name} = ${e.message}`,Elements.modalAddProduct);
+    } catch (e) {
+        if (Constants.DEV) console.log(e);
+        Util.info('Add Product Failed', `${e.code}: ${e.name} = ${e.message}`, Elements.modalAddProduct);
     }
 
     Util.enableButton(button, label);
 }
 
-function buildProductCard(product){
+export function buildProductCard(product) {
     return `
     <div id="card-${product.docId}" class="card d-inline-flex" style="width: 18rem;">
         <img src="${product.imageURL}" class="card-img-top">
@@ -140,4 +140,95 @@ function buildProductCard(product){
         </div>
     </div>
     `;
+}
+
+export function home_pageSorting() {
+
+    Elements.dropdown_sorter_name.addEventListener('click', async e => {
+        e.preventDefault();
+        
+        let products;
+        products = await CloudFunctions.getProductList();
+
+        let html = `
+        <div>
+            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modal-add-product">
+                +Add Product
+            </button>
+        </div>
+        `;
+
+        products.forEach(p => {
+            html += buildProductCard(p);
+        });
+
+        Elements.root.innerHTML = html;
+
+        const forms = document.getElementsByClassName('form-edit-delete-product');
+        for (let i = 0; i < forms.length; i++) {
+            forms[i].addEventListener('submit', async e => {
+                e.preventDefault();
+                const buttons = e.target.getElementsByTagName('button');
+                const submitter = e.target.submitter;
+                if (submitter == 'EDIT') {
+                    const label = Util.disableButton(buttons[0]);
+                    await EditProduct.edit_product(e.target.docId.value);
+                    //await Util.sleep(1000);
+                    Util.enableButton(buttons[0], label);
+                } else if (submitter == 'DELETE') {
+                    const label = Util.disableButton(buttons[1]);
+                    await EditProduct.delete_product(e.target.docId.value, e.target.imageName.value);
+                    //await Util.sleep(1000);
+                    Util.enableButton(buttons[1], label);
+                }
+                else {
+                    console.log('No suc submitter', submitter);
+                }
+            })
+        }
+    });
+
+    Elements.dropdown_sorter_price.addEventListener('click', async e => {
+        e.preventDefault();
+        
+        let products;
+        products = await CloudFunctions.getProductListByPrice();
+
+        let html = `
+        <div>
+            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modal-add-product">
+                +Add Product
+            </button>
+        </div>
+        `;
+
+        products.forEach(p => {
+            html += buildProductCard(p);
+        });
+
+        Elements.root.innerHTML = html;
+
+        const forms = document.getElementsByClassName('form-edit-delete-product');
+        for (let i = 0; i < forms.length; i++) {
+            forms[i].addEventListener('submit', async e => {
+                e.preventDefault();
+                const buttons = e.target.getElementsByTagName('button');
+                const submitter = e.target.submitter;
+                if (submitter == 'EDIT') {
+                    const label = Util.disableButton(buttons[0]);
+                    await EditProduct.edit_product(e.target.docId.value);
+                    //await Util.sleep(1000);
+                    Util.enableButton(buttons[0], label);
+                } else if (submitter == 'DELETE') {
+                    const label = Util.disableButton(buttons[1]);
+                    await EditProduct.delete_product(e.target.docId.value, e.target.imageName.value);
+                    //await Util.sleep(1000);
+                    Util.enableButton(buttons[1], label);
+                }
+                else {
+                    console.log('No suc submitter', submitter);
+                }
+            })
+        }
+    });
 }
